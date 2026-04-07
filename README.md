@@ -12,8 +12,6 @@ Drive, Gmail, Calendar, and Tasks in a single dashboard. Ask the AI to draft rep
 
 ---
 
-![Dashboard screenshot](docs/screenshot.png)
-
 ## What it does
 
 - **Unified dashboard** — Calendar (now/soon/later), priority inbox, recent Drive files, and follow-up tracker in one view
@@ -83,11 +81,11 @@ The dashboard works without an AI key — you just won't have the chat agent or 
 ## CLI reference
 
 ```bash
-npx flowspace-app              # Start (runs setup on first use)
-npx flowspace-app setup        # Re-run the setup wizard
-npx flowspace-app doctor       # Check system health
-npx flowspace-app --port 8080  # Use a custom port (default: 3000)
-npx flowspace-app --version    # Show version
+npx flowspace              # Start (runs setup on first use)
+npx flowspace setup        # Re-run the setup wizard
+npx flowspace doctor       # Check system health
+npx flowspace --port 8080  # Use a custom port (default: 3000)
+npx flowspace --version    # Show version
 ```
 
 ## Self-hosting / development
