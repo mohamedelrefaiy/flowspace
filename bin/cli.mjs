@@ -193,7 +193,7 @@ If you don't have one yet, follow these steps:
     } catch (err) {
       gwsSpinner.stop("Could not install gws CLI automatically.");
       p.log.warn(
-        "Install it manually: npm install -g @googleworkspace/cli\nThen re-run: npx flowspace"
+        "Install it manually: npm install -g @googleworkspace/cli\nThen re-run: flowspace"
       );
     }
   }
@@ -458,9 +458,9 @@ async function main() {
   flowspace \u2014 Personal Google Workspace dashboard with AI assistant
 
   Usage:
-    npx flowspace            Start FlowSpace (runs setup on first use)
-    npx flowspace setup      Re-run the setup wizard
-    npx flowspace doctor     Check system health
+    flowspace            Start FlowSpace (runs setup on first use)
+    flowspace setup      Re-run the setup wizard
+    flowspace doctor     Check system health
 
   Options:
     --port <number>   Use a specific port (default: 3000)
@@ -564,13 +564,14 @@ async function runDoctor() {
   checks.push({
     name: "Config",
     ok: config !== null,
-    detail: config ? CONFIG_PATH : "Not found \u2014 run: npx flowspace setup"
+    detail: config ? CONFIG_PATH : "Not found \u2014 run: flowspace setup"
   });
-  const hasSecret = fs.existsSync(CLIENT_SECRET_PATH) && hasValidClientSecret(CLIENT_SECRET_PATH);
+  const gwsSecretPath = path.join(os.homedir(), ".config", "gws", "client_secret.json");
+  const hasSecret = fs.existsSync(CLIENT_SECRET_PATH) && hasValidClientSecret(CLIENT_SECRET_PATH) || fs.existsSync(gwsSecretPath) && hasValidClientSecret(gwsSecretPath);
   checks.push({
     name: "Google OAuth",
     ok: hasSecret,
-    detail: hasSecret ? "client_secret.json found" : "Missing \u2014 run: npx flowspace setup"
+    detail: hasSecret ? "client_secret.json found" : "Missing \u2014 run: flowspace setup"
   });
   const gwsCmd = findGwsCommand();
   checks.push({
@@ -624,7 +625,7 @@ async function runDoctor() {
   } else {
     const critical = checks.filter((c) => !c.ok && !["AI Provider", `Port ${DEFAULT_PORT}`].includes(c.name));
     if (critical.length > 0) {
-      console.log("  Some checks failed. Run: npx flowspace setup\n");
+      console.log("  Some checks failed. Run: flowspace setup\n");
     } else {
       console.log("  Non-critical issues found. FlowSpace should still work.\n");
     }
