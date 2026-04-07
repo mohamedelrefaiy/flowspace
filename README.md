@@ -29,7 +29,13 @@ Drive, Gmail, Calendar, and Tasks in a single dashboard. Ask the AI to draft rep
 ## Quickstart
 
 ```bash
-npx flowspace
+curl -fsSL https://raw.githubusercontent.com/melrefaiy2018/flowspace/main/install.sh | bash
+```
+
+Then run:
+
+```bash
+flowspace
 ```
 
 On first run, a setup wizard walks you through:
@@ -38,7 +44,7 @@ On first run, a setup wizard walks you through:
 
 Then it opens `http://localhost:3000` in your browser.
 
-After setup, `npx flowspace` starts immediately — no wizard.
+After setup, `flowspace` starts immediately — no wizard.
 
 ## Google sign-in setup
 
@@ -81,11 +87,11 @@ The dashboard works without an AI key — you just won't have the chat agent or 
 ## CLI reference
 
 ```bash
-npx flowspace              # Start (runs setup on first use)
-npx flowspace setup        # Re-run the setup wizard
-npx flowspace doctor       # Check system health
-npx flowspace --port 8080  # Use a custom port (default: 3000)
-npx flowspace --version    # Show version
+flowspace              # Start (runs setup on first use)
+flowspace setup        # Re-run the setup wizard
+flowspace doctor       # Check system health
+flowspace --port 8080  # Use a custom port (default: 3000)
+flowspace --version    # Show version
 ```
 
 ## Self-hosting / development
@@ -120,13 +126,13 @@ npx flowspace         # Runs the bundled server
 
 ## Troubleshooting
 
-**`npx flowspace doctor`** checks your setup and tells you what's wrong.
+**`flowspace doctor`** checks your setup and tells you what's wrong.
 
 **Google sign-in fails:** Make sure you added your email as a test user in the OAuth consent screen, and that you enabled all four APIs (Drive, Gmail, Calendar, Tasks).
 
 **Port 3000 in use:** The CLI will ask to kill the existing process or pick a different port.
 
-**Re-run setup:** `npx flowspace setup` walks through configuration again without losing existing settings.
+**Re-run setup:** `flowspace setup` walks through configuration again without losing existing settings.
 
 ## License
 
