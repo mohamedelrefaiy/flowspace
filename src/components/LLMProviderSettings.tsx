@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Settings,
   Eye,
@@ -16,6 +16,8 @@ import {
   KeyRound,
   Plus,
   Trash2,
+  ExternalLink,
+  Copy,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { ProviderMetaResponse, LLMSettingsResponse, LLMProviderConfigResponse } from '../services/api';
@@ -91,6 +93,59 @@ export default function LLMProviderSettings({
   const [showAddCustom, setShowAddCustom] = useState(false);
   const [customDraft, setCustomDraft] = useState<CustomProviderDraft>({ name: '', baseURL: '', apiKey: '', model: '' });
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Codex login flow state
+  const [codexStatus, setCodexStatus] = useState<{ installed: boolean; authenticated: boolean } | null>(null);
+  const [codexLoginState, setCodexLoginState] = useState<'idle' | 'starting' | 'waiting' | 'success' | 'error'>('idle');
+  const [codexDeviceUrl, setCodexDeviceUrl] = useState<string | null>(null);
+  const [codexDeviceCode, setCodexDeviceCode] = useState<string | null>(null);
+  const [codexLoginError, setCodexLoginError] = useState<string | null>(null);
+  const codexPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Check codex status when codex panel is selected
+  useEffect(() => {
+    if (selectedId !== 'codex') return;
+    api.getCodexStatus().then(setCodexStatus).catch(() => setCodexStatus({ installed: false, authenticated: false }));
+  }, [selectedId]);
+
+  const startCodexLogin = useCallback(async () => {
+    setCodexLoginState('starting');
+    setCodexLoginError(null);
+    try {
+      const { url, code } = await api.startCodexLogin();
+      setCodexDeviceUrl(url);
+      setCodexDeviceCode(code);
+      setCodexLoginState('waiting');
+      // Open URL in browser
+      window.open(url, '_blank');
+      // Poll for completion
+      codexPollRef.current = setInterval(async () => {
+        try {
+          const { authenticated } = await api.pollCodexLogin();
+          if (authenticated) {
+            clearInterval(codexPollRef.current!);
+            codexPollRef.current = null;
+            setCodexLoginState('success');
+            setCodexStatus({ installed: true, authenticated: true });
+          }
+        } catch { /* keep polling */ }
+      }, 2000);
+      // Stop polling after 5 minutes
+      setTimeout(() => {
+        if (codexPollRef.current) {
+          clearInterval(codexPollRef.current);
+          codexPollRef.current = null;
+          setCodexLoginState((s) => s === 'waiting' ? 'idle' : s);
+        }
+      }, 5 * 60 * 1000);
+    } catch (err: any) {
+      setCodexLoginState('error');
+      setCodexLoginError(err.message ?? 'Failed to start login');
+    }
+  }, []);
+
+  // Cleanup poll on unmount
+  useEffect(() => () => { if (codexPollRef.current) clearInterval(codexPollRef.current); }, []);
 
   // Initialize forms when providers or settings change
   useEffect(() => {
@@ -562,25 +617,108 @@ export default function LLMProviderSettings({
               </div>
 
               {selectedProvider.id === 'codex' && (
-                <div className="rounded-[18px] border border-[var(--blue)]/20 bg-[var(--blue)]/5 p-4 space-y-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--blue)]">
-                    Setup required
-                  </div>
-                  <p className="text-[13px] leading-6 text-[var(--text-dim)]">
-                    Codex CLI uses your ChatGPT Plus/Pro subscription — no API key needed.
-                    Run these two commands in your terminal, then click <strong className="text-white">Save and activate</strong>.
-                  </p>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 rounded-[12px] border border-white/10 bg-black/30 px-4 py-2.5">
-                      <span className="text-[11px] text-[var(--text-faint)] shrink-0">1</span>
-                      <code className="text-[13px] text-green-300 font-mono">npm install -g @openai/codex</code>
+                <div className="rounded-[18px] border border-[var(--blue)]/20 bg-[var(--blue)]/5 p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--blue)]">
+                      ChatGPT Plus connection
                     </div>
-                    <div className="flex items-center gap-2 rounded-[12px] border border-white/10 bg-black/30 px-4 py-2.5">
-                      <span className="text-[11px] text-[var(--text-faint)] shrink-0">2</span>
-                      <code className="text-[13px] text-green-300 font-mono">codex login</code>
-                      <span className="text-[11px] text-[var(--text-faint)] ml-1">(opens browser)</span>
-                    </div>
+                    {codexStatus?.authenticated && (
+                      <span className="flex items-center gap-1.5 rounded-full border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--accent)]">
+                        <Check className="h-3 w-3" /> Connected
+                      </span>
+                    )}
                   </div>
+
+                  {!codexStatus?.installed && (
+                    <p className="text-[13px] leading-6 text-[var(--text-dim)]">
+                      First, install the Codex CLI in your terminal:
+                      <span className="block mt-2 rounded-[10px] border border-white/10 bg-black/30 px-3 py-2 font-mono text-[12px] text-green-300">
+                        npm install -g @openai/codex
+                      </span>
+                      Then reload this page and click Connect below.
+                    </p>
+                  )}
+
+                  {codexStatus?.installed && !codexStatus.authenticated && codexLoginState === 'idle' && (
+                    <div className="space-y-3">
+                      <p className="text-[13px] leading-6 text-[var(--text-dim)]">
+                        Sign in with your ChatGPT account. No API key needed — uses your Plus/Pro subscription.
+                      </p>
+                      <button
+                        onClick={() => void startCodexLogin()}
+                        className="inline-flex items-center gap-2 rounded-full border border-[var(--blue)]/30 bg-[linear-gradient(180deg,rgba(59,130,246,0.96),rgba(37,99,235,0.96))] px-4 py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Connect with ChatGPT
+                      </button>
+                    </div>
+                  )}
+
+                  {codexLoginState === 'starting' && (
+                    <div className="flex items-center gap-2 text-[13px] text-[var(--text-dim)]">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Starting login…
+                    </div>
+                  )}
+
+                  {codexLoginState === 'waiting' && codexDeviceUrl && (
+                    <div className="space-y-3">
+                      <p className="text-[13px] text-[var(--text-dim)]">
+                        A browser tab should have opened. Enter this code on the page:
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <span className="rounded-[12px] border border-white/15 bg-black/30 px-4 py-2 font-mono text-[20px] font-bold tracking-[0.2em] text-white">
+                          {codexDeviceCode}
+                        </span>
+                        <button
+                          onClick={() => codexDeviceCode && navigator.clipboard.writeText(codexDeviceCode)}
+                          className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-[var(--text-faint)] transition hover:bg-white/[0.08] hover:text-white"
+                          title="Copy code"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => codexDeviceUrl && window.open(codexDeviceUrl, '_blank')}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-[var(--text-dim)] transition hover:bg-white/[0.08] hover:text-white"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Open page
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2 text-[12px] text-[var(--text-faint)]">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Waiting for sign-in…
+                      </div>
+                    </div>
+                  )}
+
+                  {codexLoginState === 'success' && (
+                    <div className="flex items-center gap-2 text-[13px] text-green-300">
+                      <Check className="h-4 w-4" />
+                      Signed in! Click <strong>Save and activate</strong> to use Codex.
+                    </div>
+                  )}
+
+                  {codexLoginState === 'error' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-[13px] text-red-300">
+                        <X className="h-4 w-4" />
+                        {codexLoginError || 'Login failed. Is codex installed?'}
+                      </div>
+                      <button
+                        onClick={() => { setCodexLoginState('idle'); setCodexLoginError(null); }}
+                        className="text-[12px] text-[var(--blue)] hover:underline"
+                      >
+                        Try again
+                      </button>
+                    </div>
+                  )}
+
+                  {codexStatus?.authenticated && codexLoginState !== 'success' && (
+                    <p className="text-[13px] text-[var(--text-dim)]">
+                      Already signed in. Click <strong className="text-white">Save and activate</strong> to use Codex.
+                    </p>
+                  )}
                 </div>
               )}
 

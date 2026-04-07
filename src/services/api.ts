@@ -708,6 +708,16 @@ export const api = {
       method: 'DELETE',
     }),
 
+  // ── Codex CLI ────────────────────────────────────────────────────
+  getCodexStatus: () =>
+    fetchJSON<{ installed: boolean; authenticated: boolean }>('/api/codex/status'),
+
+  startCodexLogin: () =>
+    fetchJSON<{ url: string; code: string }>('/api/codex/login', { method: 'POST' }),
+
+  pollCodexLogin: () =>
+    fetchJSON<{ authenticated: boolean }>('/api/codex/login/poll'),
+
   // ── Version ──────────────────────────────────────────────────────
   getVersion: () => fetchJSON<VersionInfo>('/api/version'),
 
