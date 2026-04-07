@@ -430,7 +430,7 @@ async function setupAI(): Promise<FlowSpaceConfig['ai']> {
 async function startServer(port: number): Promise<void> {
   // Find the server entry point
   const candidates = [
-    path.join(__dirname, '..', 'dist-server', 'server.mjs'),  // Pre-bundled (npm package)
+    path.join(__dirname, '..', 'dist-server', 'server.mjs'),  // Pre-bundled (release)
     path.join(__dirname, '..', 'server.ts'),                    // Dev mode (git clone)
   ];
 
