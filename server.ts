@@ -1084,10 +1084,14 @@ function findCodexBin(): string | null {
   return null;
 }
 
-function isCodexAuthenticated(codexBin: string): boolean {
+function isCodexAuthenticated(_codexBin: string): boolean {
+  // codex login status writes directly to the terminal device — cannot be captured via pipe.
+  // Instead, check ~/.codex/auth.json which codex writes after a successful login.
   try {
-    const out = execFileSync(codexBin, ['login', 'status'], { encoding: 'utf-8', env: shellEnv });
-    return out.toLowerCase().includes('logged in');
+    const authPath = path.join(os.homedir(), '.codex', 'auth.json');
+    if (!fs.existsSync(authPath)) return false;
+    const auth = JSON.parse(fs.readFileSync(authPath, 'utf-8'));
+    return !!(auth.auth_mode && (auth.tokens || auth.OPENAI_API_KEY));
   } catch {
     return false;
   }
