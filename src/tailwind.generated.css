@@ -12,6 +12,7 @@
     --color-red-500: oklch(63.7% 0.237 25.331);
     --color-amber-500: oklch(76.9% 0.188 70.08);
     --color-green-200: oklch(92.5% 0.084 155.995);
+    --color-green-300: oklch(87.1% 0.15 154.449);
     --color-green-500: oklch(72.3% 0.219 149.579);
     --color-green-900: oklch(39.3% 0.095 152.535);
     --color-blue-500: oklch(62.3% 0.214 259.815);
@@ -1654,6 +1655,12 @@
   .bg-\[var\(--blue\)\] {
     background-color: var(--blue);
   }
+  .bg-\[var\(--blue\)\]\/5 {
+    background-color: var(--blue);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--blue) 5%, transparent);
+    }
+  }
   .bg-\[var\(--blue\)\]\/10 {
     background-color: var(--blue);
     @supports (color: color-mix(in lab, red, red)) {
@@ -2585,6 +2592,9 @@
   }
   .text-green-200 {
     color: var(--color-green-200);
+  }
+  .text-green-300 {
+    color: var(--color-green-300);
   }
   .text-green-500 {
     color: var(--color-green-500);

@@ -561,6 +561,29 @@ export default function LLMProviderSettings({
                 )}
               </div>
 
+              {selectedProvider.id === 'codex' && (
+                <div className="rounded-[18px] border border-[var(--blue)]/20 bg-[var(--blue)]/5 p-4 space-y-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--blue)]">
+                    Setup required
+                  </div>
+                  <p className="text-[13px] leading-6 text-[var(--text-dim)]">
+                    Codex CLI uses your ChatGPT Plus/Pro subscription — no API key needed.
+                    Run these two commands in your terminal, then click <strong className="text-white">Save and activate</strong>.
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 rounded-[12px] border border-white/10 bg-black/30 px-4 py-2.5">
+                      <span className="text-[11px] text-[var(--text-faint)] shrink-0">1</span>
+                      <code className="text-[13px] text-green-300 font-mono">npm install -g @openai/codex</code>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-[12px] border border-white/10 bg-black/30 px-4 py-2.5">
+                      <span className="text-[11px] text-[var(--text-faint)] shrink-0">2</span>
+                      <code className="text-[13px] text-green-300 font-mono">codex login</code>
+                      <span className="text-[11px] text-[var(--text-faint)] ml-1">(opens browser)</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {testResult?.id === selectedProvider.id && (
                 <div className={`rounded-[18px] border px-4 py-3 text-sm ${
                   testResult.success

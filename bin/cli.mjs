@@ -82,10 +82,12 @@ var require_src = __commonJS({
 });
 
 // node_modules/@clack/core/dist/index.mjs
+var import_sisteransi = __toESM(require_src(), 1);
 import { styleText as D } from "node:util";
 import { stdout as R, stdin as q } from "node:process";
-var import_sisteransi = __toESM(require_src(), 1);
+import * as k from "node:readline";
 import ot from "node:readline";
+import { ReadStream as J } from "node:tty";
 function x(t2, e, s) {
   if (!s.some((u) => !u.disabled)) return t2;
   const i = t2 + e, r = Math.max(s.length - 1, 0), n = i < 0 ? r : i > r ? 0 : i;
@@ -281,6 +283,27 @@ function W(t2, e) {
   const s = t2;
   s.isTTY && s.setRawMode(e);
 }
+function xt({ input: t2 = q, output: e = R, overwrite: s = true, hideCursor: i = true } = {}) {
+  const r = k.createInterface({ input: t2, output: e, prompt: "", tabSize: 1 });
+  k.emitKeypressEvents(t2, r), t2 instanceof J && t2.isTTY && t2.setRawMode(true);
+  const n = (u, { name: a, sequence: l }) => {
+    const E = String(u);
+    if (H([E, a, l], "cancel")) {
+      i && e.write(import_sisteransi.cursor.show), process.exit(0);
+      return;
+    }
+    if (!s) return;
+    const g = a === "return" ? 0 : -1, m = a === "return" ? -1 : 0;
+    k.moveCursor(e, g, m, () => {
+      k.clearLine(e, 1, () => {
+        t2.once("keypress", n);
+      });
+    });
+  };
+  return i && e.write(import_sisteransi.cursor.hide), t2.once("keypress", n), () => {
+    t2.off("keypress", n), i && e.write(import_sisteransi.cursor.show), t2 instanceof J && t2.isTTY && !bt && t2.setRawMode(false), r.terminal = false, r.close();
+  };
+}
 var rt = (t2) => "columns" in t2 && typeof t2.columns == "number" ? t2.columns : 80;
 var nt = (t2) => "rows" in t2 && typeof t2.rows == "number" ? t2.rows : 20;
 function Bt(t2, e, s, i = s) {
@@ -411,6 +434,23 @@ var B = class {
     }
   }
 };
+var kt = class extends B {
+  get cursor() {
+    return this.value ? 0 : 1;
+  }
+  get _value() {
+    return this.cursor === 0;
+  }
+  constructor(e) {
+    super(e, false), this.value = !!e.initialValue, this.on("userInput", () => {
+      this.value = this._value;
+    }), this.on("confirm", (s) => {
+      this.output.write(import_sisteransi.cursor.move(0, -1)), this.value = s, this.state = "submit", this.close();
+    }), this.on("cursor", () => {
+      this.value = !this.value;
+    });
+  }
+};
 var Tt = class extends B {
   options;
   cursor = 0;
@@ -466,6 +506,7 @@ function pt2() {
   return N2.platform !== "win32" ? N2.env.TERM !== "linux" : !!N2.env.CI || !!N2.env.WT_SESSION || !!N2.env.TERMINUS_SUBLIME || N2.env.ConEmuTask === "{cmd::Cmder}" || N2.env.TERM_PROGRAM === "Terminus-Sublime" || N2.env.TERM_PROGRAM === "vscode" || N2.env.TERM === "xterm-256color" || N2.env.TERM === "alacritty" || N2.env.TERMINAL_EMULATOR === "JetBrains-JediTerm";
 }
 var ee = pt2();
+var ce = () => process.env.CI === "true";
 var I2 = (e, r) => ee ? e : r;
 var Re = I2("\u25C6", "*");
 var $e = I2("\u25A0", "x");
@@ -677,7 +718,7 @@ var It2 = (e, r, s = {}) => {
   }
   return i;
 };
-function J(e, r, s) {
+function J2(e, r, s) {
   return String(e).normalize().replaceAll(`\r
 `, `
 `).split(`
@@ -702,7 +743,7 @@ var X2 = ({ cursor: e, options: r, style: s, output: i = process.stdout, maxItem
   E && F++, $ && F++;
   const y2 = g + (E ? 1 : 0), v = m - ($ ? 1 : 0);
   for (let A = y2; A < v; A++) {
-    const b = J(s(r[A], A === e), l, { hard: true, trim: false }).split(`
+    const b = J2(s(r[A], A === e), l, { hard: true, trim: false }).split(`
 `);
     d.push(b), F += b.length;
   }
@@ -715,6 +756,33 @@ var X2 = ({ cursor: e, options: r, style: s, output: i = process.stdout, maxItem
   E && C.push(c);
   for (const A of d) for (const b of A) C.push(b);
   return $ && C.push(c), C;
+};
+var Rt = (e) => {
+  const r = e.active ?? "Yes", s = e.inactive ?? "No";
+  return new kt({ active: r, inactive: s, signal: e.signal, input: e.input, output: e.output, initialValue: e.initialValue ?? true, render() {
+    const i = e.withGuide ?? _.withGuide, a = `${i ? `${t("gray", h)}
+` : ""}${W2(this.state)}  ${e.message}
+`, o = this.value ? r : s;
+    switch (this.state) {
+      case "submit": {
+        const u = i ? `${t("gray", h)}  ` : "";
+        return `${a}${u}${t("dim", o)}`;
+      }
+      case "cancel": {
+        const u = i ? `${t("gray", h)}  ` : "";
+        return `${a}${u}${t(["strikethrough", "dim"], o)}${i ? `
+${t("gray", h)}` : ""}`;
+      }
+      default: {
+        const u = i ? `${t("cyan", h)}  ` : "", l = i ? t("cyan", x2) : "";
+        return `${a}${u}${this.value ? `${t("green", z2)} ${r}` : `${t("dim", H2)} ${t("dim", r)}`}${e.vertical ? i ? `
+${t("cyan", h)}  ` : `
+` : ` ${t("dim", "/")} `}${this.value ? `${t("dim", H2)} ${t("dim", s)}` : `${t("green", z2)} ${s}`}
+${l}
+`;
+      }
+    }
+  } }).prompt();
 };
 var R2 = { message: (e = [], { symbol: r = t("gray", h), secondarySymbol: s = t("gray", h), output: i = process.stdout, spacing: a = 1, withGuide: o } = {}) => {
   const u = [], l = o ?? _.withGuide, n = l ? s : "", c = l ? `${r}  ` : "", p = l ? `${s}  ` : "";
@@ -762,9 +830,9 @@ ${t("gray", x2)}  ` : "";
 };
 var jt = (e) => t("dim", e);
 var kt2 = (e, r, s) => {
-  const i = { hard: true, trim: false }, a = J(e, r, i).split(`
+  const i = { hard: true, trim: false }, a = J2(e, r, i).split(`
 `), o = a.reduce((n, c) => Math.max(D2(c), n), 0), u = a.map(s).reduce((n, c) => Math.max(D2(c), n), 0), l = r - (u - o);
-  return J(e, l, i);
+  return J2(e, l, i);
 };
 var Vt2 = (e = "", r = "", s) => {
   const i = s?.output ?? N2.stdout, a = s?.withGuide ?? _.withGuide, o = s?.format ?? jt, u = ["", ...kt2(e, rt(i) - 6, o).split(`
@@ -778,6 +846,59 @@ var Vt2 = (e = "", r = "", s) => {
 ${c}
 ${t("gray", f + se.repeat(n + 2) + me)}
 `);
+};
+var Kt = (e) => t("magenta", e);
+var be = ({ indicator: e = "dots", onCancel: r, output: s = process.stdout, cancelMessage: i, errorMessage: a, frames: o = ee ? ["\u25D2", "\u25D0", "\u25D3", "\u25D1"] : ["\u2022", "o", "O", "0"], delay: u = ee ? 80 : 120, signal: l, ...n } = {}) => {
+  const c = ce();
+  let p, f, g = false, E = false, $ = "", m, d = performance.now();
+  const F = rt(s), y2 = n?.styleFrame ?? Kt, v = (B2) => {
+    const P2 = B2 > 1 ? a ?? _.messages.error : i ?? _.messages.cancel;
+    E = B2 === 1, g && (k2(P2, B2), E && typeof r == "function" && r());
+  }, C = () => v(2), A = () => v(1), b = () => {
+    process.on("uncaughtExceptionMonitor", C), process.on("unhandledRejection", C), process.on("SIGINT", A), process.on("SIGTERM", A), process.on("exit", v), l && l.addEventListener("abort", A);
+  }, w = () => {
+    process.removeListener("uncaughtExceptionMonitor", C), process.removeListener("unhandledRejection", C), process.removeListener("SIGINT", A), process.removeListener("SIGTERM", A), process.removeListener("exit", v), l && l.removeEventListener("abort", A);
+  }, S2 = () => {
+    if (m === void 0) return;
+    c && s.write(`
+`);
+    const B2 = J2(m, F, { hard: true, trim: false }).split(`
+`);
+    B2.length > 1 && s.write(import_sisteransi2.cursor.up(B2.length - 1)), s.write(import_sisteransi2.cursor.to(0)), s.write(import_sisteransi2.erase.down());
+  }, T2 = (B2) => B2.replace(/\.+$/, ""), M2 = (B2) => {
+    const P2 = (performance.now() - B2) / 1e3, G2 = Math.floor(P2 / 60), L2 = Math.floor(P2 % 60);
+    return G2 > 0 ? `[${G2}m ${L2}s]` : `[${L2}s]`;
+  }, O2 = n.withGuide ?? _.withGuide, le = (B2 = "") => {
+    g = true, p = xt({ output: s }), $ = T2(B2), d = performance.now(), O2 && s.write(`${t("gray", h)}
+`);
+    let P2 = 0, G2 = 0;
+    b(), f = setInterval(() => {
+      if (c && $ === m) return;
+      S2(), m = $;
+      const L2 = y2(o[P2]);
+      let Z2;
+      if (c) Z2 = `${L2}  ${$}...`;
+      else if (e === "timer") Z2 = `${L2}  ${$} ${M2(d)}`;
+      else {
+        const et2 = ".".repeat(Math.floor(G2)).slice(0, 3);
+        Z2 = `${L2}  ${$}${et2}`;
+      }
+      const Ze = J2(Z2, F, { hard: true, trim: false });
+      s.write(Ze), P2 = P2 + 1 < o.length ? P2 + 1 : 0, G2 = G2 < 4 ? G2 + 0.125 : 0;
+    }, u);
+  }, k2 = (B2 = "", P2 = 0, G2 = false) => {
+    if (!g) return;
+    g = false, clearInterval(f), S2();
+    const L2 = P2 === 0 ? t("green", V) : P2 === 1 ? t("red", $e) : t("red", de);
+    $ = B2 ?? $, G2 || (e === "timer" ? s.write(`${L2}  ${$} ${M2(d)}
+`) : s.write(`${L2}  ${$}
+`)), w(), p();
+  };
+  return { start: le, stop: (B2 = "") => k2(B2, 0), message: (B2 = "") => {
+    $ = T2(B2 ?? $);
+  }, cancel: (B2 = "") => k2(B2, 1), error: (B2 = "") => k2(B2, 2), clear: () => k2("", 0, true), get isCancelled() {
+    return E;
+  } };
 };
 var ze = { light: I2("\u2500", "-"), heavy: I2("\u2501", "="), block: I2("\u2588", "#") };
 var oe = (e, r) => e.includes(`
@@ -871,6 +992,9 @@ var CLIENT_SECRET_PATH = path.join(FLOWSPACE_DIR, "client_secret.json");
 var DEFAULT_PORT = 3e3;
 var REQUIRED_NODE_MAJOR = 20;
 function getVersion() {
+  if (!"1.2.12".includes("__CLI")) {
+    return "1.2.12";
+  }
   try {
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf-8"));
     return pkg.version ?? "0.0.0";
@@ -966,6 +1090,7 @@ async function runSetupWizard() {
   const port = DEFAULT_PORT;
   const config = {
     version: 1,
+    appVersion: getVersion(),
     google: googleSection,
     ai: aiSection,
     port
@@ -992,6 +1117,7 @@ async function setupAI() {
       { value: "openai", label: "OpenAI", hint: "GPT-4o, GPT-4" },
       { value: "anthropic", label: "Anthropic", hint: "Claude" },
       { value: "openrouter", label: "OpenRouter", hint: "Multiple models" },
+      { value: "codex", label: "Codex (ChatGPT Plus/Pro)", hint: "Sign in with ChatGPT \u2014 no API key needed" },
       { value: "lmstudio", label: "LM Studio", hint: "Local models, no API key needed" },
       { value: "custom", label: "Custom (OpenAI-compatible)", hint: "Any OpenAI-compatible API" },
       { value: "skip", label: "Skip for now", hint: "Dashboard works without AI" }
@@ -1004,6 +1130,51 @@ async function setupAI() {
   if (aiChoice === "skip") {
     R2.info("AI skipped. You can configure it later in Settings.");
     return { configured: false };
+  }
+  if (aiChoice === "codex") {
+    const { execSync: execSync2 } = await import("child_process");
+    let codexFound = false;
+    try {
+      execSync2("codex --version", { stdio: "ignore" });
+      codexFound = true;
+    } catch {
+    }
+    if (!codexFound) {
+      const s = be();
+      s.start("Installing @openai/codex globally...");
+      try {
+        execSync2("npm install -g @openai/codex", { stdio: "ignore" });
+        s.stop("@openai/codex installed");
+      } catch {
+        s.stop("");
+        R2.warn("Could not install @openai/codex automatically.");
+        R2.info("Run manually: npm install -g @openai/codex");
+        R2.info("Then run: codex login");
+        return { configured: false };
+      }
+    }
+    R2.info("Opening browser for ChatGPT sign-in...");
+    try {
+      execSync2("codex login", { stdio: "inherit" });
+    } catch {
+      R2.warn("codex login failed or was cancelled.");
+      R2.info('Run "codex login" manually, then restart flowspace.');
+      return { configured: false };
+    }
+    const llmSettings2 = {
+      activeProvider: "codex",
+      providers: {
+        codex: {
+          provider: "codex",
+          apiKey: "",
+          model: "o4-mini"
+        }
+      }
+    };
+    const settingsPath2 = path.join(FLOWSPACE_DIR, ".llm-settings.json");
+    fs.writeFileSync(settingsPath2, JSON.stringify(llmSettings2, null, 2), { mode: 384 });
+    R2.success("Codex (ChatGPT) configured!");
+    return { configured: true, provider: "codex" };
   }
   if (aiChoice === "lmstudio") {
     R2.info("LM Studio detected. Make sure it's running on http://localhost:1234");
@@ -1126,7 +1297,7 @@ async function setupAI() {
 async function startServer(port) {
   const candidates = [
     path.join(__dirname, "..", "dist-server", "server.mjs"),
-    // Pre-bundled (npm package)
+    // Pre-bundled (release)
     path.join(__dirname, "..", "server.ts")
     // Dev mode (git clone)
   ];
@@ -1214,6 +1385,7 @@ async function main() {
     flowspace            Start FlowSpace (runs setup on first use)
     flowspace setup      Re-run the setup wizard
     flowspace doctor     Check system health
+    flowspace reset      Delete all settings for a clean start
 
   Options:
     --port <number>   Use a specific port (default: 3000)
@@ -1235,6 +1407,26 @@ async function main() {
     await runDoctor();
     return;
   }
+  if (subcommand === "reset") {
+    Wt2("FlowSpace Reset");
+    const confirm = await Rt({
+      message: `Delete all FlowSpace settings in ${FLOWSPACE_DIR}? This cannot be undone.`
+    });
+    if (Ct(confirm) || !confirm) {
+      Nt("Cancelled.");
+      process.exit(0);
+    }
+    if (fs.existsSync(FLOWSPACE_DIR)) {
+      fs.readdirSync(FLOWSPACE_DIR).forEach((f) => {
+        try {
+          fs.rmSync(path.join(FLOWSPACE_DIR, f), { recursive: true });
+        } catch {
+        }
+      });
+    }
+    Gt('All settings cleared. Run "flowspace" to set up again.');
+    return;
+  }
   if (!checkNodeVersion()) {
     console.error(`
   FlowSpace requires Node.js ${REQUIRED_NODE_MAJOR}+. You have ${process.versions.node}.
@@ -1245,7 +1437,67 @@ async function main() {
   const port = portIdx >= 0 ? parseInt(args[portIdx + 1], 10) || DEFAULT_PORT : DEFAULT_PORT;
   let config = readConfig();
   if (!config) {
-    config = await runSetupWizard();
+    const hasExistingData = fs.existsSync(FLOWSPACE_DIR) && fs.readdirSync(FLOWSPACE_DIR).some((f) => [".llm-settings.json", ".tokens.json", ".accounts.json"].includes(f));
+    if (hasExistingData) {
+      Wt2("Welcome back to FlowSpace");
+      Vt2(
+        "An existing FlowSpace installation was found, but setup has not been completed.\nYour existing Google sign-in and settings will be preserved.",
+        "Existing installation detected"
+      );
+      const action = await Jt({
+        message: "What would you like to do?",
+        options: [
+          { value: "keep", label: "Keep existing settings and start", hint: "Recommended \u2014 your Google account stays connected" },
+          { value: "setup", label: "Re-run setup wizard", hint: "Configure a new AI provider or change settings" },
+          { value: "fresh", label: "Start fresh (delete all settings)", hint: "Removes all saved accounts and settings" }
+        ]
+      });
+      if (Ct(action)) {
+        Nt("Cancelled.");
+        process.exit(0);
+      }
+      if (action === "fresh") {
+        const confirm = await Rt({ message: "Delete all FlowSpace settings? This cannot be undone." });
+        if (Ct(confirm) || !confirm) {
+          Nt("Cancelled.");
+          process.exit(0);
+        }
+        fs.readdirSync(FLOWSPACE_DIR).forEach((f) => {
+          try {
+            fs.rmSync(path.join(FLOWSPACE_DIR, f), { recursive: true });
+          } catch {
+          }
+        });
+        R2.success("Settings cleared.");
+        config = await runSetupWizard();
+      } else if (action === "setup") {
+        config = await runSetupWizard();
+      } else {
+        config = { version: 1, appVersion: getVersion(), google: { clientSecretPath: "", configured: true }, ai: { configured: false }, port: DEFAULT_PORT };
+        writeConfig(config);
+      }
+    } else {
+      config = await runSetupWizard();
+    }
+  } else if (!config.appVersion || config.appVersion !== getVersion()) {
+    Wt2(`FlowSpace v${getVersion()}`);
+    const action = await Jt({
+      message: "Your settings from the previous version are intact. What would you like to do?",
+      options: [
+        { value: "keep", label: "Keep existing settings and start", hint: "Recommended" },
+        { value: "setup", label: "Re-run setup wizard", hint: "Reconfigure AI provider or other settings" }
+      ]
+    });
+    if (Ct(action)) {
+      Nt("Cancelled.");
+      process.exit(0);
+    }
+    if (action === "setup") {
+      config = await runSetupWizard();
+    } else {
+      config = { ...config, appVersion: getVersion() };
+      writeConfig(config);
+    }
   }
   const portFree = await isPortAvailable(port);
   if (!portFree) {
