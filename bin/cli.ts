@@ -544,6 +544,7 @@ async function main(): Promise<void> {
     flowspace            Start FlowSpace (runs setup on first use)
     flowspace setup      Re-run the setup wizard
     flowspace doctor     Check system health
+    flowspace reset      Delete all settings for a clean start
 
   Options:
     --port <number>   Use a specific port (default: 3000)
@@ -567,6 +568,21 @@ async function main(): Promise<void> {
 
   if (subcommand === 'doctor') {
     await runDoctor();
+    return;
+  }
+
+  if (subcommand === 'reset') {
+    p.intro('FlowSpace Reset');
+    const confirm = await p.confirm({
+      message: `Delete all FlowSpace settings in ${FLOWSPACE_DIR}? This cannot be undone.`,
+    });
+    if (p.isCancel(confirm) || !confirm) { p.cancel('Cancelled.'); process.exit(0); }
+    if (fs.existsSync(FLOWSPACE_DIR)) {
+      fs.readdirSync(FLOWSPACE_DIR).forEach(f => {
+        try { fs.rmSync(path.join(FLOWSPACE_DIR, f), { recursive: true }); } catch { /* ignore */ }
+      });
+    }
+    p.outro('All settings cleared. Run "flowspace" to set up again.');
     return;
   }
 
@@ -624,9 +640,9 @@ async function main(): Promise<void> {
     } else {
       config = await runSetupWizard();
     }
-  } else if (config.appVersion && config.appVersion !== getVersion()) {
-    // Version changed — ask if they want to re-run setup
-    p.intro(`FlowSpace updated to v${getVersion()}`);
+  } else if (!config.appVersion || config.appVersion !== getVersion()) {
+    // appVersion missing (old install) or version changed — ask if they want to re-run setup
+    p.intro(`FlowSpace v${getVersion()}`);
     const action = await p.select({
       message: 'Your settings from the previous version are intact. What would you like to do?',
       options: [
