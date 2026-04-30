@@ -165,23 +165,53 @@ make dev
 ## Architecture
 
 ```
-┌─────────────────────────────────────────┐
-│  Browser  (localhost:3000)              │
-│  ┌─────────────────────────────────┐    │
-│  │  React 19 · Tailwind CSS v4     │    │
-│  │  Framer Motion · Lucide React   │    │
-│  └──────────────┬──────────────────┘    │
-│                 │ fetch                 │
-│  ┌──────────────┴──────────────────┐    │
-│  │  Express Server (Node.js)       │    │
-│  │  ├─ Google APIs (googleapis)    │    │
-│  │  ├─ AI Agent  (23 tools)        │    │
-│  │  └─ gws CLI  (auth + exec)      │    │
-│  └─────────────────────────────────┘    │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  YOUR MACHINE  (localhost:3000)                                       │
+│                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────┐ │
+│  │  Browser — React 19 · Tailwind CSS v4 · Framer Motion           │ │
+│  │                                                                  │ │
+│  │   Dashboard · Inbox · Calendar · Tasks · Chat · Automations     │ │
+│  └──────────────────────────────┬───────────────────────────────────┘ │
+│                                 │  HTTP / SSE                         │
+│  ┌──────────────────────────────▼───────────────────────────────────┐ │
+│  │  Express Server (Node.js)                                        │ │
+│  │                                                                  │ │
+│  │  ┌─────────────────────┐   ┌──────────────────────────────────┐ │ │
+│  │  │   AI Agent           │   │   Workflow Scheduler             │ │ │
+│  │  │                     │   │                                  │ │ │
+│  │  │  tool-call loop     │   │  setInterval per workflow        │ │ │
+│  │  │  (up to 5 rounds)   │   │  email triggers · auto-triage    │ │ │
+│  │  │                     │   │  failure tracking + retry        │ │ │
+│  │  │  23 tools           │   └──────────────────────────────────┘ │ │
+│  │  │  approval gating    │                                         │ │
+│  │  │  memory retrieval   │   ┌──────────────────────────────────┐ │ │
+│  │  └──────────┬──────────┘   │   Persistent Storage (local)     │ │ │
+│  │             │              │                                  │ │ │
+│  │             │              │  ~/.flowspace/                   │ │ │
+│  │             │              │  ├─ memory (embeddings)          │ │ │
+│  │             │              │  ├─ conversation summaries       │ │ │
+│  │             │              │  ├─ workflow state               │ │ │
+│  │             │              │  └─ credentials (gws)            │ │ │
+│  │             │              └──────────────────────────────────┘ │ │
+│  └─────────────┼────────────────────────────────────────────────────┘ │
+└───────────────-┼──────────────────────────────────────────────────────┘
+                 │
+        ┌────────┴─────────┐
+        │                  │
+        ▼                  ▼
+┌───────────────┐  ┌───────────────────────────┐
+│  Google APIs  │  │  AI Provider (your key)   │
+│               │  │                           │
+│  Gmail        │  │  OpenAI · Anthropic       │
+│  Drive        │  │  OpenRouter · LM Studio   │
+│  Calendar     │  │  any OpenAI-compatible    │
+│  Tasks        │  └───────────────────────────┘
+│  Sheets       │
+└───────────────┘
 ```
 
-A single Express process serves both the API and the React frontend. All Google auth is handled by the `gws` CLI — no OAuth project or client secrets required from the user.
+Everything runs locally — no cloud infra, no data leaving your machine except to Google's APIs and your chosen AI provider. A single Express process serves the API and the React frontend. The AI agent and workflow scheduler share the same server process; all state is written to `~/.flowspace/` on disk.
 
 ---
 
